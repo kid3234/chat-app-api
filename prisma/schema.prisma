@@ -14,16 +14,90 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  username        String    @unique
+  password        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastSeen        DateTime?
+  blockedUsers    Block[]   @relation("UserBlocks")
+  blockedByUsers  Block[]   @relation("BlockedBy")
+  reportsReported Report[]  @relation("ReportedUser")
+  reportsMade     Report[]  @relation("ReporterUser")
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
 
-model User{
-  id String @id @default(uuid())
-  email String @unique
-  username String @unique
-  password String 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  chatsAsUser1 Chat[] @relation("ChatUser1")
+  chatsAsUser2 Chat[] @relation("ChatUser2")
 
-
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
 }
 
+model Block {
+  id        String   @id @default(uuid())
+  blocker   User     @relation("UserBlocks", fields: [blockerId], references: [id])
+  blockerId String
+  blocked   User     @relation("BlockedBy", fields: [blockedId], references: [id])
+  blockedId String
+  createdAt DateTime @default(now())
+}
 
+model Report {
+  id         String   @id @default(uuid())
+  reporter   User     @relation("ReporterUser", fields: [reporterId], references: [id])
+  reporterId String
+  reported   User     @relation("ReportedUser", fields: [reportedId], references: [id])
+  reportedId String
+  reason     String
+  createdAt  DateTime @default(now())
+}
+
+model FriendRequest {
+  id         String        @id @default(uuid())
+  sender     User          @relation("SentRequests", fields: [senderId], references: [id])
+  senderId   String
+  receiver   User          @relation("ReceivedRequests", fields: [receiverId], references: [id])
+  receiverId String
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  user1     User     @relation("ChatUser1", fields: [user1Id], references: [id])
+  user1Id   String
+  user2     User     @relation("ChatUser2", fields: [user2Id], references: [id])
+  user2Id   String
+  createdAt DateTime @default(now())
+
+  @@unique([user1Id, user2Id])
+}
+
+model Message {
+  id          String     @id @default(uuid())
+  sender      User       @relation("SentMessages", fields: [senderId], references: [id])
+  senderId    String
+  recipient   User       @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  recipientId String
+  text        String
+  mediaUrl    String?
+  mediaType   MediaType?
+   deleted     Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  delivered   Boolean    @default(false)
+  seen        Boolean    @default(false)
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
